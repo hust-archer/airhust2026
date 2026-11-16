@@ -13,5 +13,5 @@ catkin_package(
 
 include_directories(${catkin_INCLUDE_DIRS})
 
-add_executable(example_listener src/example_listener.cpp)
-target_link_libraries(example_listener ${catkin_LIBRARIES})
+add_executable(flight_node src/flight_node.cpp)
+target_link_libraries(flight_node ${catkin_LIBRARIES})
