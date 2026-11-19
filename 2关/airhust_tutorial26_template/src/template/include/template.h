@@ -69,7 +69,10 @@ bool mission_pos_cruise(float x, float y, float z, float target_yaw, float error
         local_pos.pose.pose.position.x ,local_pos.pose.pose.position.y, local_pos.pose.pose.position.z, yaw * 180.0 / M_PI, 
         x, y, z, target_yaw * 180.0 / M_PI, 
         init_position_x_take_off, init_position_y_take_off, init_position_z_take_off, init_yaw_take_off * 180.0 / M_PI);
-	if (fabs(local_pos.pose.pose.position.x - x - init_position_x_take_off) < error_max && fabs(local_pos.pose.pose.position.y - y - init_position_y_take_off) < error_max && fabs(local_pos.pose.pose.position.z - z - init_position_z_take_off) < error_max && fabs(yaw - target_yaw) < 0.1)
+        double dyaw = target_yaw - yaw;
+while (dyaw > M_PI)  dyaw -= 2.0 * M_PI;
+while (dyaw < -M_PI) dyaw += 2.0 * M_PI;
+	if (fabs(local_pos.pose.pose.position.x - x - init_position_x_take_off) < error_max && fabs(local_pos.pose.pose.position.y - y - init_position_y_take_off) < error_max && fabs(local_pos.pose.pose.position.z - z - init_position_z_take_off) < error_max && fabs(dyaw) < 0.1)
 	{
 		ROS_INFO("到达目标点，巡航点任务完成");
 		mission_pos_cruise_flag = false;

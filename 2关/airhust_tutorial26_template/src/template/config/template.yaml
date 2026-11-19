@@ -1,2 +1,6 @@
 err_max: 0.15
 if_debug: 1
+circle_radius: 1.5
+circle_num: 12
+circle_center_x: 0.0
+circle_center_y: 2.0

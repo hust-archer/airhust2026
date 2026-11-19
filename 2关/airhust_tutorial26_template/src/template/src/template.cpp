@@ -9,6 +9,11 @@ using std::endl;
 
 // 全局变量定义
 int mission_num = 0;
+float circle_radius = 1.5;
+float circle_num = 12;
+float circle_center_x = 0.0;
+float circle_center_y = 0.0;
+int circle_index = 0;
 float if_debug = 0;
 float err_max = 0.2;
 void print_param()
@@ -49,6 +54,10 @@ int main(int argc, char **argv)
 
   nh.param<float>("err_max", err_max, 0);
   nh.param<float>("if_debug", if_debug, 0);
+  nh.param<float>("circle_radius", circle_radius, 1.5);
+  nh.param<float>("circle_num", circle_num, 12);
+  nh.param<float>("circle_center_x", circle_center_x, 0.0);
+  nh.param<float>("circle_center_y", circle_center_y, 0.0);
   print_param();
 
   
@@ -124,7 +133,7 @@ int main(int argc, char **argv)
 
   while (ros::ok())
   {
-    ROS_WARN("mission_num = %d", mission_num);
+    ROS_INFO_THROTTLE(1.0, "mission_num = %d", mission_num);
     
     switch (mission_num)
     {
@@ -148,21 +157,36 @@ int main(int argc, char **argv)
 
       //世界系前进
       case 2:
-        if (mission_pos_cruise(4.0, 0.0, ALTITUDE, 1.57, err_max))
-        {
-          mission_num = 3;
-          last_request = ros::Time::now();
-        }
-        break;
+{
+  if (mission_pos_cruise(circle_center_x + circle_radius, circle_center_y, ALTITUDE, M_PI/2.0, err_max))
+  {
+    circle_index = 0;
+    mission_num = 3;
+  }
+  break;
+}
+
+
+
     
       //机体系右移
       case 3:
-        if(current_position_cruise(0.0, -4.0, ALTITUDE, -1.57, err_max))
-        {
-          mission_num = 4;
-          last_request = ros::Time::now();
-        }
-        break;
+{
+  float theta = 2.0 * M_PI * circle_index / circle_num;
+  float tx = circle_center_x + circle_radius * cos(theta);
+  float ty = circle_center_y + circle_radius * sin(theta);
+  float target_yaw =theta + M_PI/2.0;
+  if (mission_pos_cruise(tx, ty, ALTITUDE, target_yaw, err_max))
+  {
+    circle_index++;
+    if (circle_index > circle_num)
+    {
+      circle_index = 0;
+      mission_num = 4;
+    }
+  }
+  break;
+}
 
       //悬停
       case 4:
