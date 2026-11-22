@@ -45,7 +45,10 @@ float vel_sp_max;                                               //总速度限�
 
 void rotation_yaw(float yaw_angle, float input[2], float output[2])
 {
-    
+  float c = cos(yaw_angle);
+  float s = sin(yaw_angle);
+  output[0] = input[0] * c - input[1] * s;
+  output[1] = input[0] * s + input[1] * c;
 }
 
 //在 360 个 bin 里找最近的障碍物：distance_c 为水平距离[m]，angle_c 为机体系角度[度]，0 度 = 机头方向
@@ -73,10 +76,14 @@ void cal_min_distance()
 //避障函数
 void collision_avoidance(float target_x,float target_y)
 {
+    //1.绕行方向锁定：+1 = 向左(+y)，-1 = 向右(-y)，0 = 尚未决定
+    static int avoid_side = 0;
+    
     //2. 根据最小距离判断：是否启用避障策略
     if (distance_c >= R_outside )
     {
         flag_collision_avoidance.data = false;
+        avoid_side=0;
     }
     else
     {
@@ -96,45 +103,70 @@ void collision_avoidance(float target_x,float target_y)
         }
     }
 
-    vel_collision[0]= 0;
-    vel_collision[1]= 0;
+    vel_collision[0] = 0;
+    vel_collision[1] = 0;
 
     //4. 避障策略
-    if(flag_collision_avoidance.data == true)
+    if (flag_collision_avoidance.data == true)
     {
         distance_cx = distance_c * cos(angle_c/180*3.1415926);
         distance_cy = distance_c * sin(angle_c/180*3.1415926);
 
         float F_c = 0;
 
-        //小幅度抑制移动速度
-        
-
-        //大幅度抑制移动速度
-        
+        if (distance_c < R_inside)
+        {
+            //大幅度抑制移动速度（近距离）
+           F_c = p_R * (R_outside - R_inside)
+                + p_r * (R_inside - distance_c);
+        }
+        else
+        {
+            //小幅度抑制移动速度（远距离）
+             F_c = p_R * (R_outside - distance_c);
+        }
 
         //距离为 0 时"障碍物在哪个方向"没有意义，跳过除法，避免 0/0 = nan
-        if (distance_c > 0.01f)
-        {
-            vel_collision[0] = vel_collision[0] - F_c * distance_cx / distance_c;
-            vel_collision[1] = vel_collision[1] - F_c * distance_cy / distance_c;
-        }
-        //避障速度限幅到设定最大值（需要等比例修改）
-        
+      if (distance_c > 0.01f)
+{
+    float rx = -F_c * distance_cx / distance_c;
+    float ry = -F_c * distance_cy / distance_c;
+
+    if (avoid_side == 0)
+    {
+        avoid_side = (ry >= 0.0f) ? 1 : -1;
+        ROS_WARN("[LOCK] side=%d first_ry=%.4f F_c=%.3f rho=%.3f",
+                 avoid_side, ry, F_c, distance_c);
+    }
+
+    if (fabs(ry) < 0.4f * F_c)
+    {
+        ry = avoid_side * 0.4f * F_c;
+    }
+
+    vel_collision[0] = rx;
+    vel_collision[1] = ry;
+}
 
     }
 
-    //坐标系转换
-    
+    //坐标系转换：机体系 → 世界系
+    rotation_yaw(yaw, vel_collision, vel_collision_ENU);
 
     vel_sp_ENU[0] = vel_track[0] + vel_collision_ENU[0];
     vel_sp_ENU[1] = vel_track[1] + vel_collision_ENU[1];
 
-
     //速度限幅
-    
-
+    float sp_max = (fabs(vel_sp_ENU[0]) >= fabs(vel_sp_ENU[1]))
+                 ? fabs(vel_sp_ENU[0]) : fabs(vel_sp_ENU[1]);
+    if (sp_max > vel_sp_max)
+    {
+        float k = vel_sp_max / sp_max;
+        vel_sp_ENU[0] *= k;
+        vel_sp_ENU[1] *= k;
+    }
 }
+
 
 //接收处理三维点云（世界系 ENU）：
 //   只保留与机体同高（"0 度平面"）这个水平切片里的点

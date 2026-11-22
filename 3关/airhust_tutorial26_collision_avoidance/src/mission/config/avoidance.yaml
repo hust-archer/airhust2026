@@ -23,7 +23,7 @@ range_min: 0
 range_max: 359
 
 # 三维点云切片：只取与机体同高（0 度平面）附近的点，超出这个高度带的不参与避障 [m]
-z_band: 0.10
+z_band: 0.30
 # 水平距离过滤：太近的点多为自机/地面噪声，太远的点不参与避障 [m]
 min_obstacle_range: 0.15
 max_obstacle_range: 8.0
